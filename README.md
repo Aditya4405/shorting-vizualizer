@@ -4,7 +4,7 @@
 
 <hr>
 
-Site link : [Link Text](sorting-view.netlify.app)
+[Click Here to View Live Project](https://sorting-view.netlify.app)
 
 ## 🚀 Features
 

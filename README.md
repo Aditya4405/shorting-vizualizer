@@ -57,9 +57,4 @@
   <li>That's it! No build tools or server required.</li>
 </ol>
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/1032fc69-c837-4da0-b8dc-42b89b503541" alt="Screenshot 1" width="940" height="545">
-  <img src="https://github.com/user-attachments/assets/f4af4f4c-6155-4c71-9f9e-8827cdefdf9e" alt="Screenshot 2" width="940" height="466">
-</p>
-
 <hr>

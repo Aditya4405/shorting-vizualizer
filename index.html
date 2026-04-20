@@ -471,7 +471,7 @@
                 this.speed = 100;
                 this.isSort = false;
                 this.soundEnabled = true;
-                this.showValues = false;
+                this.showValues = true;
                 this.comparisons = 0;
                 this.swaps = 0;
                 this.startTime = 0;
@@ -479,6 +479,8 @@
                 
                 this.stepMode = false;
                 this.stepPaused = false;
+                this.history = [];
+                this.historyIndex = -1;
                 this.stepResolve = null;
 
                 this.initializeElements();
@@ -497,6 +499,8 @@
                 this.sortBtn = document.getElementById('sortBtn');
                 this.soundToggle = document.getElementById('soundToggle');
                 this.showValuesToggle = document.getElementById('showValuesToggle');
+                document.getElementById('showValuesIcon').textContent = '🔢';
+                this.showValuesToggle.classList.add('bg-white/20');
                 
                 this.comparisonsEl = document.getElementById('comparisons');
                 this.swapsEl = document.getElementById('swaps');
@@ -512,6 +516,7 @@
 
                 this.stepModeToggle = document.getElementById('stepModeToggle');
                 this.stepControls = document.getElementById('stepControls');
+                this.stepPrevBtn = document.getElementById('stepPrevBtn');
                 this.stepNextBtn = document.getElementById('stepNextBtn');
                 this.stepPauseBtn = document.getElementById('stepPauseBtn');
 
@@ -586,6 +591,8 @@
                         this.stepControls.classList.add('hidden');
                         this.stepControls.classList.remove('grid');
                         this.stepPaused = false;
+                this.history = [];
+                this.historyIndex = -1;
                         if(this.stepResolve) {
                             this.stepResolve();
                             this.stepResolve = null;
@@ -593,31 +600,60 @@
                     }
                 });
 
-                this.stepPauseBtn.addEventListener('click', () => {
-                    this.stepPaused = !this.stepPaused;
+                this.updatePauseButton = () => {
                     if (this.stepPaused) {
                         this.stepPauseBtn.innerHTML = '▶️ Resume';
                         this.stepPauseBtn.classList.replace('bg-warning/20', 'bg-success/20');
                         this.stepPauseBtn.classList.replace('text-warning', 'text-success');
-                        this.addLog("Paused.", "warning");
                     } else {
                         this.stepPauseBtn.innerHTML = '⏸️ Pause';
                         this.stepPauseBtn.classList.replace('bg-success/20', 'bg-warning/20');
                         this.stepPauseBtn.classList.replace('text-success', 'text-warning');
+                    }
+                };
+
+                this.stepPauseBtn.addEventListener('click', () => {
+                    this.stepPaused = !this.stepPaused;
+                    this.updatePauseButton();
+                    
+                    if (this.stepPaused) {
+                        this.addLog("Paused.", "warning");
+                    } else {
                         this.addLog("Resumed.", "success");
-                        if(this.stepResolve) {
+                        // If we are looking at history, snap back to present
+                        if (this.history.length > 0 && this.historyIndex < this.history.length - 1) {
+                            this.historyIndex = this.history.length - 1;
+                            this.renderState(this.history[this.historyIndex]);
+                        }
+                        if (this.stepResolve) {
                             this.stepResolve();
                             this.stepResolve = null;
+                        }
+                    }
+                });
+
+                this.stepPrevBtn.addEventListener('click', () => {
+                    if (this.history.length > 0 && this.historyIndex > 0) {
+                        this.historyIndex--;
+                        this.renderState(this.history[this.historyIndex]);
+                        if (!this.stepPaused && this.isSort) {
+                            this.stepPaused = true;
+                            this.updatePauseButton();
                         }
                     }
                 });
 
                 this.stepNextBtn.addEventListener('click', () => {
-                    if(this.stepPaused && this.stepResolve) {
+                    if (this.history.length > 0 && this.historyIndex < this.history.length - 1) {
+                        this.historyIndex++;
+                        this.renderState(this.history[this.historyIndex]);
+                    } else if (this.stepPaused && this.stepResolve && this.historyIndex === this.history.length - 1) {
                         this.stepResolve();
                         this.stepResolve = null;
                     }
                 });
+
+                // old stepNextBtn removed
 
                 document.getElementById('closeModalBtn').addEventListener('click', () => {
                     const modal = document.getElementById('successModal');
@@ -742,15 +778,18 @@
                     tooltip.textContent = value;
                     bar.appendChild(tooltip);
 
-                    if (this.showValues && barWidth > 15) {
+                    if (this.showValues || barWidth > 20) {
                         const label = document.createElement('div');
-                        label.className = 'text-[10px] font-bold text-white/80 mb-1 absolute -top-4 opacity-0 transition-opacity';
+                        label.className = 'text-[12px] font-bold text-white mb-1 absolute -top-5 w-full text-center truncate drop-shadow-md z-10 pointer-events-none';
                         label.textContent = value;
                         label.id = `label-${index}`;
                         barContainer.appendChild(label);
-                        // show on hover or always if wide enough
-                        bar.addEventListener('mouseenter', () => label.classList.remove('opacity-0'));
-                        bar.addEventListener('mouseleave', () => label.classList.add('opacity-0'));
+                        
+                        // Also put the value inside the bar if it's tall enough
+                        const innerLabel = document.createElement('div');
+                        innerLabel.className = 'text-[10px] font-bold text-white/90 text-center w-full absolute bottom-2 pointer-events-none';
+                        innerLabel.textContent = value;
+                        bar.appendChild(innerLabel);
                     }
 
                     barContainer.appendChild(bar);
@@ -792,6 +831,69 @@
                 `).join('');
             }
 
+            recordState() {
+                const colors = [];
+                for (let i = 0; i < this.arraySize; i++) {
+                    const bar = document.getElementById(`bar-${i}`);
+                    colors.push(bar ? bar.className : '');
+                }
+                const activeEl = document.querySelector('.active-line');
+                const state = {
+                    array: [...this.array],
+                    colors: colors,
+                    comparisons: this.comparisons,
+                    swaps: this.swaps,
+                    logs: this.logContainer.innerHTML,
+                    activeCode: activeEl ? activeEl.id : null
+                };
+                
+                // If we went back in time and then advanced, we should ideally truncate history,
+                // but since we only allow advancing algorithm from the present, it's fine.
+                this.history.push(state);
+                this.historyIndex = this.history.length - 1;
+            }
+
+            renderState(state) {
+                if (!state) return;
+                this.array = [...state.array];
+                const maxVal = this.getMaxVal();
+                for (let i = 0; i < this.arraySize; i++) {
+                    const bar = document.getElementById(`bar-${i}`);
+                    if (bar) {
+                        bar.className = state.colors[i];
+                        const heightPercent = Math.max(5, (this.array[i] / maxVal) * 100);
+                        bar.style.height = `${heightPercent}%`;
+                        
+                        const label = document.getElementById(`label-${i}`);
+                        if (label) label.textContent = this.array[i];
+                        
+                        // Handle inner labels if they exist
+                        const innerLabel = bar.querySelector('.text-center.w-full.absolute.bottom-2');
+                        if (innerLabel) innerLabel.textContent = this.array[i];
+                        
+                        const tooltip = bar.querySelector('.tooltip-text');
+                        if (tooltip) tooltip.textContent = this.array[i];
+                    }
+                }
+                
+                this.comparisons = state.comparisons;
+                this.swaps = state.swaps;
+                this.comparisonsEl.textContent = this.comparisons;
+                this.swapsEl.textContent = this.swaps;
+                
+                this.logContainer.innerHTML = state.logs;
+                this.logContainer.scrollTop = this.logContainer.scrollHeight;
+                
+                document.querySelectorAll('#pseudocodeContainer > div').forEach(el => el.classList.remove('active-line'));
+                if (state.activeCode) {
+                    const activeEl = document.getElementById(state.activeCode);
+                    if (activeEl) {
+                        activeEl.classList.add('active-line');
+                        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }
+            }
+
             addLog(msg, type="normal") {
                 const div = document.createElement('div');
                 div.className = `py-1 border-b border-border/30 ${type==='warning'?'text-warning':type==='success'?'text-success':type==='info'?'text-accent':'text-textSoft'}`;
@@ -819,6 +921,7 @@
             }
 
             async sleep(ms) {
+                this.recordState();
                 await this.checkStepPause();
                 return new Promise(resolve => setTimeout(resolve, ms));
             }
@@ -905,6 +1008,8 @@
             async startSorting() {
                 if (this.isSort) return;
                 this.isSort = true;
+                this.history = [];
+                this.historyIndex = -1;
                 this.sortBtn.innerHTML = '⏳ Sorting...';
                 this.sortBtn.classList.add('opacity-70', 'cursor-not-allowed');
                 this.generateBtn.disabled = true;
@@ -927,10 +1032,11 @@
                     // Final Animation
                     for(let i=0; i<this.array.length; i++) {
                         await this.markSorted([i]);
-                        await new Promise(r => setTimeout(r, 10));
+                        await this.sleep(10);
                     }
                     this.stopTimer();
                     this.addLog("Array sorted successfully!", "success");
+                    this.recordState();
                     this.showSuccessModal();
                 } catch(e) {
                     console.error(e);

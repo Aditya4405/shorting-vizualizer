@@ -657,9 +657,9 @@
                 if (!input) return;
                 try {
                     const nums = input.split(',').map(s => {
-                        const n = parseInt(s.trim());
+                        const n = parseFloat(s.trim());
                         if (isNaN(n)) throw new Error("Invalid number");
-                        return Math.max(10, Math.min(100, n));
+                        return n;
                     });
                     if (nums.length < 2) throw new Error("Need at least 2 numbers");
                     if (nums.length > 100) throw new Error("Max 100 numbers");
@@ -715,6 +715,10 @@
                 if (this.timeInterval) clearInterval(this.timeInterval);
             }
 
+            getMaxVal() {
+                return Math.max(...this.originalArray, 1);
+            }
+
             renderArray() {
                 this.arrayContainer.innerHTML = '';
                 const containerWidth = this.arrayContainer.clientWidth;
@@ -726,9 +730,17 @@
                     barContainer.style.width = `${barWidth}px`;
 
                     const bar = document.createElement('div');
-                    bar.className = 'w-full bg-gradient-to-t from-accent to-blue-500 rounded-t-sm transition-all duration-200';
-                    bar.style.height = `${value}%`;
+                    bar.className = 'w-full bg-gradient-to-t from-accent to-blue-500 rounded-t-sm transition-all duration-200 relative group';
+                    const maxVal = this.getMaxVal();
+                    const heightPercent = Math.max(5, (value / maxVal) * 100);
+                    bar.style.height = `${heightPercent}%`;
                     bar.id = `bar-${index}`;
+                    
+                    // Tooltip
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'absolute -top-6 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] py-0.5 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none hidden md:block tooltip-text';
+                    tooltip.textContent = value;
+                    bar.appendChild(tooltip);
 
                     if (this.showValues && barWidth > 15) {
                         const label = document.createElement('div');
@@ -838,7 +850,7 @@
             async resetBarColors(indices) {
                 indices.forEach(idx => {
                     const bar = document.getElementById(`bar-${idx}`);
-                    if(bar) bar.className = 'w-full bg-gradient-to-t from-accent to-blue-500 rounded-t-sm transition-all duration-200';
+                    if(bar) bar.className = 'w-full bg-gradient-to-t from-accent to-blue-500 rounded-t-sm transition-all duration-200 relative group';
                 });
             }
 
@@ -866,8 +878,16 @@
                 const b1 = document.getElementById(`bar-${i}`);
                 const b2 = document.getElementById(`bar-${j}`);
                 if(b1 && b2) {
-                    b1.style.height = `${this.array[i]}%`;
-                    b2.style.height = `${this.array[j]}%`;
+                    b1.style.height = `${Math.max(5, (this.array[i] / this.getMaxVal()) * 100)}%`;
+                    const label1 = document.getElementById(`label-${i}`);
+                    if(label1) label1.textContent = this.array[i];
+                    const tooltip1 = b1.querySelector('.tooltip-text');
+                    if(tooltip1) tooltip1.textContent = this.array[i];
+                    b2.style.height = `${Math.max(5, (this.array[j] / this.getMaxVal()) * 100)}%`;
+                    const label2 = document.getElementById(`label-${j}`);
+                    if(label2) label2.textContent = this.array[j];
+                    const tooltip2 = b2.querySelector('.tooltip-text');
+                    if(tooltip2) tooltip2.textContent = this.array[j];
                     b1.classList.add('animate-bounce-subtle');
                     b2.classList.add('animate-bounce-subtle');
                     setTimeout(() => { b1.classList.remove('animate-bounce-subtle'); b2.classList.remove('animate-bounce-subtle'); }, 300);
@@ -1028,7 +1048,14 @@
                         
                         this.highlightCode(4);
                         this.array[j + 1] = this.array[j];
-                        document.getElementById(`bar-${j+1}`).style.height = `${this.array[j+1]}%`;
+                        const barEl_j+1 = document.getElementById(`bar-${j+1}`);
+                    if(barEl_j+1) {
+                        barEl_j+1.style.height = `${Math.max(5, (this.array[j+1] / this.getMaxVal()) * 100)}%`;
+                        const labelEl = document.getElementById(`label-${j+1}`);
+                        if(labelEl) labelEl.textContent = this.array[j+1];
+                        const tooltipEl = barEl_j+1.querySelector('.tooltip-text');
+                        if(tooltipEl) tooltipEl.textContent = this.array[j+1];
+                    }
                         
                         this.swaps++; this.swapsEl.textContent = this.swaps;
                         await this.sleep(this.speed);
@@ -1038,7 +1065,14 @@
                     }
                     this.highlightCode(6);
                     this.array[j + 1] = key;
-                    document.getElementById(`bar-${j+1}`).style.height = `${key}%`;
+                    const barEl_j+1 = document.getElementById(`bar-${j+1}`);
+                    if(barEl_j+1) {
+                        barEl_j+1.style.height = `${Math.max(5, (key / this.getMaxVal()) * 100)}%`;
+                        const labelEl = document.getElementById(`label-${j+1}`);
+                        if(labelEl) labelEl.textContent = key;
+                        const tooltipEl = barEl_j+1.querySelector('.tooltip-text');
+                        if(tooltipEl) tooltipEl.textContent = key;
+                    }
                     await this.resetBarColors([i]);
                     await this.markSorted(Array.from({length: i+1}, (_, idx) => idx));
                 }
@@ -1123,7 +1157,14 @@
                         arr[k] = rightArr[j]; j++;
                     }
                     
-                    document.getElementById(`bar-${k}`).style.height = `${arr[k]}%`;
+                    const barEl_k = document.getElementById(`bar-${k}`);
+                    if(barEl_k) {
+                        barEl_k.style.height = `${Math.max(5, (arr[k] / this.getMaxVal()) * 100)}%`;
+                        const labelEl = document.getElementById(`label-${k}`);
+                        if(labelEl) labelEl.textContent = arr[k];
+                        const tooltipEl = barEl_k.querySelector('.tooltip-text');
+                        if(tooltipEl) tooltipEl.textContent = arr[k];
+                    }
                     this.swaps++; this.swapsEl.textContent = this.swaps;
                     await this.sleep(this.speed);
                     k++;
@@ -1131,13 +1172,27 @@
                 
                 while (i < leftArr.length) {
                     arr[k] = leftArr[i];
-                    document.getElementById(`bar-${k}`).style.height = `${arr[k]}%`;
+                    const barEl_k = document.getElementById(`bar-${k}`);
+                    if(barEl_k) {
+                        barEl_k.style.height = `${Math.max(5, (arr[k] / this.getMaxVal()) * 100)}%`;
+                        const labelEl = document.getElementById(`label-${k}`);
+                        if(labelEl) labelEl.textContent = arr[k];
+                        const tooltipEl = barEl_k.querySelector('.tooltip-text');
+                        if(tooltipEl) tooltipEl.textContent = arr[k];
+                    }
                     i++; k++;
                     await this.sleep(this.speed/2);
                 }
                 while (j < rightArr.length) {
                     arr[k] = rightArr[j];
-                    document.getElementById(`bar-${k}`).style.height = `${arr[k]}%`;
+                    const barEl_k = document.getElementById(`bar-${k}`);
+                    if(barEl_k) {
+                        barEl_k.style.height = `${Math.max(5, (arr[k] / this.getMaxVal()) * 100)}%`;
+                        const labelEl = document.getElementById(`label-${k}`);
+                        if(labelEl) labelEl.textContent = arr[k];
+                        const tooltipEl = barEl_k.querySelector('.tooltip-text');
+                        if(tooltipEl) tooltipEl.textContent = arr[k];
+                    }
                     j++; k++;
                     await this.sleep(this.speed/2);
                 }
@@ -1224,7 +1279,14 @@
                 
                 for (let i = 0; i < n; i++) {
                     this.array[i] = output[i];
-                    document.getElementById(`bar-${i}`).style.height = `${this.array[i]}%`;
+                    const barEl_i = document.getElementById(`bar-${i}`);
+                    if(barEl_i) {
+                        barEl_i.style.height = `${Math.max(5, (this.array[i] / this.getMaxVal()) * 100)}%`;
+                        const labelEl = document.getElementById(`label-${i}`);
+                        if(labelEl) labelEl.textContent = this.array[i];
+                        const tooltipEl = barEl_i.querySelector('.tooltip-text');
+                        if(tooltipEl) tooltipEl.textContent = this.array[i];
+                    }
                     await this.highlightBars([i], 'bg-success');
                     await this.sleep(this.speed / 2);
                     await this.resetBarColors([i]);

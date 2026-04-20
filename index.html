@@ -1048,12 +1048,12 @@
                         
                         this.highlightCode(4);
                         this.array[j + 1] = this.array[j];
-                        const barEl_j+1 = document.getElementById(`bar-${j+1}`);
-                    if(barEl_j+1) {
-                        barEl_j+1.style.height = `${Math.max(5, (this.array[j+1] / this.getMaxVal()) * 100)}%`;
+                        const barEl_j_1 = document.getElementById(`bar-${j+1}`);
+                    if(barEl_j_1) {
+                        barEl_j_1.style.height = `${Math.max(5, (this.array[j+1] / this.getMaxVal()) * 100)}%`;
                         const labelEl = document.getElementById(`label-${j+1}`);
                         if(labelEl) labelEl.textContent = this.array[j+1];
-                        const tooltipEl = barEl_j+1.querySelector('.tooltip-text');
+                        const tooltipEl = barEl_j_1.querySelector('.tooltip-text');
                         if(tooltipEl) tooltipEl.textContent = this.array[j+1];
                     }
                         
@@ -1065,12 +1065,12 @@
                     }
                     this.highlightCode(6);
                     this.array[j + 1] = key;
-                    const barEl_j+1 = document.getElementById(`bar-${j+1}`);
-                    if(barEl_j+1) {
-                        barEl_j+1.style.height = `${Math.max(5, (key / this.getMaxVal()) * 100)}%`;
+                    const barEl_j_1 = document.getElementById(`bar-${j+1}`);
+                    if(barEl_j_1) {
+                        barEl_j_1.style.height = `${Math.max(5, (key / this.getMaxVal()) * 100)}%`;
                         const labelEl = document.getElementById(`label-${j+1}`);
                         if(labelEl) labelEl.textContent = key;
-                        const tooltipEl = barEl_j+1.querySelector('.tooltip-text');
+                        const tooltipEl = barEl_j_1.querySelector('.tooltip-text');
                         if(tooltipEl) tooltipEl.textContent = key;
                     }
                     await this.resetBarColors([i]);
